@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Mirror;
 
-public class movement : MonoBehaviour
+public class movement : NetworkBehaviour 
 {
     protected CharacterController controller;
     protected Animator animator;
@@ -15,11 +16,10 @@ public class movement : MonoBehaviour
     public LayerMask groundMask;
 
     Vector3 velocity;
-    [SerializeField]
-    private bool isGrounded;
 
     void Start()
     {
+        if (!isLocalPlayer) DestroyImmediate(this);
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
     }
@@ -27,7 +27,7 @@ public class movement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        if (!isLocalPlayer) return;
         if (CheckGround() && velocity.y < 0)
             velocity.y = -2f;
 

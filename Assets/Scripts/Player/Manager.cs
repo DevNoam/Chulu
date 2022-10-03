@@ -1,15 +1,16 @@
 using UnityEngine;
-using TMPro;
+using Mirror;
 
-public class Manager : MonoBehaviour
+public class Manager : NetworkBehaviour
 {
-    protected Camera camera;
+    [SerializeField]
+    private Camera cam;
     public GameObject holdPos; // Where should the item be held in the character
     private GameObject heldObj; // Refrence to pickable object
     public float pickupRange = 1f; // The range the player can pickup objects
     [SerializeField] private LayerMask pickUpLayer; // Which layer can be pickable
     // Update is called once per frame
-    protected IKControl ikControl; // Refrence to IK modifier script, important for animations.
+    //protected IKControl ikControl; // Refrence to IK modifier script, important for animations.
 
     [SerializeField]
     private float playerHealth = 100f; // Your actual number
@@ -23,20 +24,31 @@ public class Manager : MonoBehaviour
             characterCanvas.healthUI.text = playerHealth.ToString();
         }
     }
+    [SerializeField]
+    private characterCanvas characterCanvas; // Script that manages the Front end UI.
 
-    protected characterCanvas characterCanvas; // Script that manages the Front end UI.
-    void Start()
-    {
-        camera = Camera.main;
-        characterCanvas = GetComponent<characterCanvas>();
-        ikControl = GetComponent<IKControl>();
+
+
+    //IK STUFF
+    [SerializeField]
+    private Animator animator;
+    private bool ikActive = false;
+
+    private Transform rightHandPick = null;
+    private Transform leftHandPick = null;
+    
+    
+    void Start() {
     }
     GameObject item;
     bool isLockedItem = false;
-    void Update()
+    Ray ray;
+    public void Update()
     {
-        bool isItem = (Physics.Raycast(camera.transform.position, camera.transform.forward, out RaycastHit raycastHit, pickupRange, pickUpLayer));
-        Debug.DrawRay(Camera.main.transform.position, Camera.main.transform.forward * pickupRange, Color.yellow);
+        if (!hasAuthority) return;
+        ray = new Ray(cam.transform.position, cam.transform.forward);
+        bool isItem = (Physics.Raycast(ray, out RaycastHit raycastHit, pickupRange, pickUpLayer));
+        Debug.DrawRay(cam.transform.position, cam.transform.forward * pickupRange, Color.yellow);
 
         if(isItem && heldObj == null)
         {
@@ -47,6 +59,7 @@ public class Manager : MonoBehaviour
                 characterCanvas.itemHealth.value = item.GetComponent<chair>().getHP;
                 characterCanvas.pickupNotice.SetActive(true);
                 isLockedItem = true;
+                return;
             }
             if(Input.GetKeyDown("e"))
             {
@@ -60,10 +73,13 @@ public class Manager : MonoBehaviour
         {
             characterCanvas.pickupNotice.SetActive(false);
             isLockedItem = false;
+            return;
         }
         if (heldObj != null && Input.GetKeyDown("e"))
+        {
             DropObj();
-
+            return;
+        }
     }
         
 
@@ -83,7 +99,7 @@ public class Manager : MonoBehaviour
             Transform leftPos = pickObj.transform.Find("HandPointL");
             Transform rightPos = pickObj.transform.Find("HandPointR");
 
-            ikControl.PickUp(rightPos, leftPos);
+            PickUp(rightPos, leftPos);
         }
     }
 
@@ -94,7 +110,57 @@ public class Manager : MonoBehaviour
         heldObj.GetComponent<Rigidbody>().AddForce(Camera.main.transform.forward * heldObj.GetComponent<chair>().dropForce());
         heldObj.transform.parent = null;
         heldObj = null;
-        ikControl.Drop();
+        Drop();
     }
+
+
+
+
+
+#region IK
+
+    //a callback for calculating IK
+    private void OnAnimatorIK()
+    {
+        //if the IK is active, set the position and rotation directly to the goal.
+        animator.SetLookAtWeight(1f, 0f, 1f);
+        animator.SetLookAtPosition(ray.GetPoint(25));
+        if(ikActive) {
+        // Set the look target position, if one has been assigned
+        animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 1);
+        animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1);
+        animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 1);
+        animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 1);
+        animator.SetIKPosition(AvatarIKGoal.RightHand, rightHandPick.position);
+        animator.SetIKPosition(AvatarIKGoal.LeftHand, leftHandPick.position);
+        animator.SetIKRotation(AvatarIKGoal.RightHand, rightHandPick.rotation);
+        animator.SetIKRotation(AvatarIKGoal.LeftHand, leftHandPick.rotation);
+
+        }
+
+        //if the IK is not active, set the position and rotation of the hand and head back to the original position
+        else {
+            animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0);
+            animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0);
+            animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0);
+            animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0);
+            //animator.SetLookAtWeight(0);
+        }
+    }
+
+    public void PickUp(Transform rightPos, Transform leftPos)
+    {
+        leftHandPick = leftPos;
+        rightHandPick = rightPos;
+        ikActive = true;
+    }
+    public void Drop()
+    {
+        leftHandPick = null;
+        rightHandPick = null;
+        ikActive = false;
+    }
+#endregion
+
 }
 

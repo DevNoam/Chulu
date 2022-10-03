@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Mirror;
 
-public class chair : MonoBehaviour
+public class chair : NetworkBehaviour
 {
     [Range(0f, 10000f)]
     [Tooltip("Damage to players")]
@@ -14,6 +15,7 @@ public class chair : MonoBehaviour
     private float selfDamageMultiplier = 2f;
     [Tooltip("Chair health level besfore breakage")]
     [SerializeField] //temp
+    [SyncVar]
     private float chairHP = 100f;
 
     public float getHP // Health modifier

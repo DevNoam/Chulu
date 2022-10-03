@@ -3,76 +3,98 @@ using TMPro;
 
 public class Manager : MonoBehaviour
 {
-    public GameObject holdPos;
-    private GameObject heldObj;
-    public float pickupRange = 1f;
-    [SerializeField] private LayerMask pickUpLayer;
+    protected Camera camera;
+    public GameObject holdPos; // Where should the item be held in the character
+    private GameObject heldObj; // Refrence to pickable object
+    public float pickupRange = 1f; // The range the player can pickup objects
+    [SerializeField] private LayerMask pickUpLayer; // Which layer can be pickable
     // Update is called once per frame
-    protected IKControl ikControl;
+    protected IKControl ikControl; // Refrence to IK modifier script, important for animations.
 
     [SerializeField]
-    float playerHealth = 100f; // Your actual number
-    public float PlayerHealth
+    private float playerHealth = 100f; // Your actual number
+    public float PlayerHealth // Health modifier
     {
         get{
             return playerHealth;
         }
         set {
             playerHealth = Mathf.Round(value);
-            healthUI.text = playerHealth.ToString();
+            characterCanvas.healthUI.text = playerHealth.ToString();
         }
-        
     }
-    public TMP_Text healthUI; 
+
+    protected characterCanvas characterCanvas; // Script that manages the Front end UI.
     void Start()
     {
+        camera = Camera.main;
+        characterCanvas = GetComponent<characterCanvas>();
         ikControl = GetComponent<IKControl>();
     }
+    GameObject item;
+    bool isLockedItem = false;
     void Update()
     {
-        if (Input.GetKeyDown("f"))
+        bool isItem = (Physics.Raycast(camera.transform.position, camera.transform.forward, out RaycastHit raycastHit, pickupRange, pickUpLayer));
+        Debug.DrawRay(Camera.main.transform.position, Camera.main.transform.forward * pickupRange, Color.yellow);
+
+        if(isItem && heldObj == null)
         {
-            if (heldObj == null)
+            if(isLockedItem == false)
             {
-                if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out RaycastHit raycastHit, pickupRange, pickUpLayer))
-                {
-                    PickupObject(raycastHit.transform.gameObject);
-                }
+                item = raycastHit.transform.gameObject;
+                characterCanvas.itemName.text = item.name.ToString();
+                characterCanvas.itemHealth.value = item.GetComponent<chair>().getHP;
+                characterCanvas.pickupNotice.SetActive(true);
+                isLockedItem = true;
             }
-            else
+            if(Input.GetKeyDown("e"))
             {
-                DropObj();
+                characterCanvas.pickupNotice.SetActive(false);
+                isLockedItem = false;
+                PickupObject(raycastHit.transform.gameObject);
+                return;
             }
         }
-
-        void PickupObject(GameObject pickObj)
+        else if(!isItem && characterCanvas.pickupNotice.activeSelf)
         {
-            if (pickObj.GetComponent<Rigidbody>())
-            {
-                Rigidbody heldObjRB = pickObj.GetComponent<Rigidbody>();
-                heldObjRB.isKinematic = true;
-                heldObjRB.constraints = RigidbodyConstraints.FreezeRotation;
-
-                heldObjRB.transform.parent = holdPos.transform;
-                heldObjRB.transform.localPosition = new Vector3(0, 0, 0);
-                heldObjRB.transform.localRotation = Quaternion.Euler(0,0,0);
-                heldObj = pickObj;
-
-                Transform leftPos = pickObj.transform.Find("HandPointL");
-                Transform rightPos = pickObj.transform.Find("HandPointR");
-
-                ikControl.PickUp(rightPos, leftPos);
-            }
+            characterCanvas.pickupNotice.SetActive(false);
+            isLockedItem = false;
         }
+        if (heldObj != null && Input.GetKeyDown("e"))
+            DropObj();
 
-        void DropObj()
+    }
+        
+
+    void PickupObject(GameObject pickObj)
+    {
+        if (pickObj.GetComponent<Rigidbody>())
         {
-                heldObj.GetComponent<Rigidbody>().isKinematic = false;
-                heldObj.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
-                heldObj.GetComponent<Rigidbody>().AddForce(Camera.main.transform.forward * heldObj.GetComponent<chair>().dropForce());
-                heldObj.transform.parent = null;
-                heldObj = null;
-                ikControl.Drop();
-            }
+            Rigidbody heldObjRB = pickObj.GetComponent<Rigidbody>();
+            heldObjRB.isKinematic = true;
+            heldObjRB.constraints = RigidbodyConstraints.FreezeRotation;
+
+            heldObjRB.transform.parent = holdPos.transform;
+            heldObjRB.transform.localPosition = new Vector3(0, 0, 0);
+            heldObjRB.transform.localRotation = Quaternion.Euler(0,0,0);
+            heldObj = pickObj;
+
+            Transform leftPos = pickObj.transform.Find("HandPointL");
+            Transform rightPos = pickObj.transform.Find("HandPointR");
+
+            ikControl.PickUp(rightPos, leftPos);
         }
+    }
+
+    void DropObj()
+    {
+        heldObj.GetComponent<Rigidbody>().isKinematic = false;
+        heldObj.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
+        heldObj.GetComponent<Rigidbody>().AddForce(Camera.main.transform.forward * heldObj.GetComponent<chair>().dropForce());
+        heldObj.transform.parent = null;
+        heldObj = null;
+        ikControl.Drop();
+    }
 }
+

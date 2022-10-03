@@ -16,6 +16,12 @@ public class chair : MonoBehaviour
     [SerializeField] //temp
     private float chairHP = 100f;
 
+    public float getHP // Health modifier
+    {
+        get{
+            return chairHP;
+        }
+    }
 
 
     [SerializeField]
@@ -54,7 +60,7 @@ public class chair : MonoBehaviour
         }
         if(chairHP <= 0)
         {   
-            Destroy(this.gameObject);
+            //Destroy(this.gameObject);
             Debug.Log("Destroy chair");
         }
     }

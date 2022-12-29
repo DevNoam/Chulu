@@ -6,27 +6,29 @@ using Mirror;
 public class mouseLook : NetworkBehaviour
 {
     float mouseSens = 100f;
-    public Transform Target;
-    public Transform playerBody;
-    public Transform cameraPos;
+    
+    [SerializeField]
+    private Transform Target;
+    [SerializeField]
+    private Transform playerBody;
+    [SerializeField]
+    private Transform cameraPos;
     
     float xRotation = 0f;
 
     // Start is called before the first frame update
     void Start()
     {
-        if (!hasAuthority) 
-        {
-            DestroyImmediate(this.gameObject);
-        }
+        if(!hasAuthority) { this.enabled = false; return;};
         Cursor.lockState = CursorLockMode.Locked;
     }
-
-    // Update is called once per frame
+    
+    [ClientCallback]
     void Update()
     {
         if (!hasAuthority)
-            return; 
+            return;
+        //Client mouse pos generation
         float mouseX = Input.GetAxis("Mouse X") * mouseSens * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSens * Time.deltaTime;
 
@@ -35,10 +37,20 @@ public class mouseLook : NetworkBehaviour
         if(cameraPos != null)
             Target.position = cameraPos.position;
         Target.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
-        if(playerBody != null)
-        {
-            playerBody.Rotate(Vector3.up * mouseX);
-        }
+        playerBody.Rotate(Vector3.up * mouseX);
 
+        //Upload data to server
+        CmdRotation(xRotation);
+    }
+    [Command]
+    void CmdRotation(float xRotation)
+    {
+        Target.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        RpcRotation();
+    }
+    [ClientRpc]
+    void RpcRotation()
+    {
+        Target.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
     }
 }

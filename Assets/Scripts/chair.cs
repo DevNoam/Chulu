@@ -38,27 +38,15 @@ public class chair : NetworkBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    /*void FixedUpdate() {
-        if(rb.velocity.magnitude > 0.9)
-        {
-            chairHP -= (rb.velocity.magnitude / 3);
-            Debug.Log(rb.velocity.magnitude);
-        }
-    }*/
+    [Server]
     private void OnCollisionEnter(Collision other) {
-        if(other.gameObject.tag == "Player")
-        {
-            try
-            {
-            other.gameObject.GetComponent<bot>().damage((damageDeal * rb.velocity.magnitude));
-            }
-            catch (System.Exception)
-            {}
-            other.gameObject.GetComponent<Manager>().PlayerHealth -= (damageDeal * rb.velocity.magnitude);
-        }
         if(rb.velocity.magnitude > 0.9)
         {
             chairHP -= (rb.velocity.magnitude * (selfDamageMultiplier));
+        }
+        if(other.gameObject.tag == "Player")
+        {
+            other.gameObject.GetComponent<Manager>().PlayerHealth -= (damageDeal * rb.velocity.magnitude);
         }
         if(chairHP <= 0)
         {   

@@ -1,18 +1,24 @@
 using UnityEngine;
+using Mirror;
 
-public class HandsFollow : MonoBehaviour
+public class HandsFollow : NetworkBehaviour 
 {
-    public Transform lookPos;
-    public Transform cam;
-
+    [SerializeField]
+    private Transform lookPos;
+    [SerializeField]
+    private Transform cam;
+    [SerializeField]
+    private Transform target;
     void Start()
     {
-        if(cam == null)
-            Destroy(this.gameObject);
+        if(!hasAuthority) { this.enabled = false; return;};
     }
+
+    [ClientCallback]
     void Update()
     {
-        this.transform.position = lookPos.position;
-        this.transform.localRotation = Quaternion.Euler(cam.localEulerAngles.x, 0f, 0f);
+        if(!hasAuthority) {return;}
+        target.transform.position = lookPos.position;
+        target.transform.localRotation = Quaternion.Euler(cam.localEulerAngles.x, 0f, 0f);
     }
 }
